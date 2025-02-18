@@ -10,7 +10,7 @@ sudo apt install python3-pip
 ```
 Install Flask
 ```bash
-pip install Flask
+sudo apt install python3-flask
 ```
 Clone the repository
 
