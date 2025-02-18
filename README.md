@@ -15,7 +15,7 @@ sudo apt install python3-flask
 Clone the repository
 
 ```bash
-git clone https://github.com/CloudKeeper-Inc/EFS-PDF-Viewer
+git clone git@github.com:CloudKeeper-Inc/EFS-PDF-Viewer.git
 ```
 Install Nginx Server
 
