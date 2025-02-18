@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Directory Browser</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .directory {
+            margin-left: 20px;
+        }
+        .directory-name {
+            cursor: pointer;
+            font-weight: bold;
+            color: #007BFF;
+        }
+        .directory-name:hover {
+            text-decoration: underline;
+        }
+        .pdf-file {
+            margin-left: 20px;
+            color: #28A745;
+        }
+        .pdf-file a {
+            text-decoration: none;
+            color: inherit;
+        }
+        .pdf-file a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>Directory Browser</h1>
+    <div id="directory-structure">
+        <!-- Directory structure will be dynamically loaded here -->
+    </div>
+
+    <script>
+        // Fetch directory structure from the server
+        async function loadDirectoryStructure() {
+            const response = await fetch("/directory_structure");
+            const data = await response.json();
+            renderDirectoryStructure(data);
+        }
+
+        // Render directory structure as a tree
+        function renderDirectoryStructure(data, parentElement) {
+            const container = parentElement || document.getElementById("directory-structure");
+            container.innerHTML = ""; // Clear existing content
+
+            data.forEach(item => {
+                //removeAttr('download');
+                if (item.type === "directory") {
+
+                    const dirElement = document.createElement("div");
+                    dirElement.className = "directory";
+                    dirElement.innerHTML = `
+                        <div class="directory-name" onclick="toggleDirectory('${item.path}')">
+                            📁 ${item.name}
+                        </div>
+                        <div id="contents-${item.path}" class="directory-contents" style="display: none;"></div>
+                    `;
+                    container.appendChild(dirElement);
+
+                    // Load contents of the directory when expanded
+                    if (item.contents) {
+                        renderDirectoryStructure(item.contents, document.getElementById(`contents-${item.path}`));
+                    }
+                } else if (item.type === "file") {
+                    const fileElement = document.createElement("div");
+                    fileElement.className = "pdf-file";
+                    fileElement.innerHTML = `
+                        <a href="#" onclick="viewPdf('${item.path}')">📄 ${item.name}</a>
+                    `;
+                    container.appendChild(fileElement);
+                    //removeAttr('download');
+                }
+            });
+        }
+
+        // Toggle directory expansion/collapse
+        function toggleDirectory(path) {
+            const contents = document.getElementById(`contents-${path}`);
+            if (contents.style.display === "none") {
+                contents.style.display = "block";
+            } else {
+                contents.style.display = "none";
+            }
+        }
+
+        // Open PDF in a new page
+        function viewPdf(path) {
+            window.open(`/view_pdf?path=${encodeURIComponent(path)}`, "_blank");
+        }
+
+        // Load directory structure when the page loads
+        window.onload = loadDirectoryStructure;
+    </script>
+</body>
+</html>        
