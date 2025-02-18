@@ -1,5 +1,5 @@
 # EFS-PDF-Viewer
-This is a PDF viewer through which you can just view the pdf and not download it.
+This is a PDF viewer through which you can just view the PDF and not download it.
 * The PDF viewer has screen shot protection for every hot keys in case you hit the space bar and the screen remains black cleck any other key it will go back to normal.
 * If you accidently click tab key then just move your mouse in the middle of the screen and click it will go back to normal
 ## Installation
@@ -15,7 +15,7 @@ sudo apt install python3-flask
 Clone the repository
 
 ```bash
-git clone <git_url>
+git clone https://github.com/CloudKeeper-Inc/EFS-PDF-Viewer
 ```
 Install Nginx Server
 
@@ -45,6 +45,8 @@ sudo systemctl status nginx
 ```
 
 ## Usage 
+Mount your EFS file system to your desired path
+
 Change the PDF_PATH to the mount point of your EFS and then run the below command.
 ```bash
 python3 app.py
