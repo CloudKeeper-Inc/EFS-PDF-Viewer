@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View PDF</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-print-color-adjust: none !important;
+            print-color-adjust: none !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+            -moz-user-select: none !important;
+            -ms-user-select: none !important;
+        }
+        
+        @media print {
+            body * {
+                display: none !important;
+                visibility: hidden !important;
+            }
+            body:after {
+                content: "Printing is not allowed";
+                display: block !important;
+                visibility: visible !important;
+                text-align: center;
+                padding: 50px;
+            }
+        }
+
+        body {
+            background-color: #525659;
+            height: 100vh;
+            overflow: auto;
+            -webkit-touch-callout: none !important;
+        }
+
+        #pdfContainer {
+            width: 100%;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100%;
+            position: relative;
+        }
+
+        .page-container {
+            margin: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            position: relative;
+            background: white;
+            overflow: hidden;
+        }
+
+        .screen-shield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 999999;
+            display: none;
+            pointer-events: none;
+        }
+
+        canvas {
+            display: block;
+            position: relative;
+            z-index: 1;
+        }
+
+        #printContainer {
+            display: none !important;
+            visibility: hidden !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="pdfContainer"></div>
+    <div class="screen-shield"></div>
+    <script>
+        (function() {
+            let isProtectionActive = false;
+            const screenShield = document.querySelector('.screen-shield');
+            
+            // Function to activate protection
+            function activateProtection() {
+                isProtectionActive = true;
+                screenShield.style.display = 'block';
+            }
+
+            // Function to deactivate protection
+            function deactivateProtection() {
+                isProtectionActive = false;
+                screenShield.style.display = 'none';
+            }
+
+            const loadPDF = async (pdfUrl) => {
+                try {
+                    const loadingTask = pdfjsLib.getDocument(pdfUrl);
+                    const pdf = await loadingTask.promise;
+                    
+                    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                        const page = await pdf.getPage(pageNum);
+                        const viewport = page.getViewport({ scale: 1.5 });
+                        
+                        const pageContainer = document.createElement('div');
+                        pageContainer.className = 'page-container';
+                        
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        
+                        pageContainer.appendChild(canvas);
+                        document.getElementById('pdfContainer').appendChild(pageContainer);
+                        
+                        await page.render({
+                            canvasContext: context,
+                            viewport: viewport
+                        }).promise;
+                    }
+                } catch (error) {}
+            };
+
+            const initSecurity = () => {
+                const blockedKeys = [
+                    's', 'p', 'c', 'k', 'i', 'u',
+                    'PrtSc',
+                    'Space',
+                    'Insert',
+                    'Meta',
+                ];
+
+                // Monitor keyboard events for keydown
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || 
+                        blockedKeys.includes(e.code) || blockedKeys.includes(e.key)) {
+                        e.preventDefault();
+                        activateProtection();
+                        return false;
+                    }
+                }, true);
+
+                // Monitor keyboard events for keyup
+                document.addEventListener('keyup', (e) => {
+                    if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && 
+                        !blockedKeys.includes(e.code) && !blockedKeys.includes(e.key)) {
+                        deactivateProtection();
+                    }
+                }, true);
+
+                // Monitor mouse events
+                ['contextmenu', 'selectstart', 'copy', 'beforeprint', 'dragstart'].forEach(event => {
+                    document.addEventListener(event, e => {
+                        e.preventDefault();
+                        activateProtection();
+                        return false;
+                    });
+                });
+
+                // Monitor clipboard
+                document.addEventListener('copy', (e) => {
+                    e.preventDefault();
+                    activateProtection();
+                });
+
+                // Prevent WebRTC screen sharing
+                if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+                    navigator.mediaDevices.getDisplayMedia = () => {
+                        activateProtection();
+                        return Promise.reject(new Error('Screen capture is disabled'));
+                    };
+                }
+
+                // Monitor visibility changes
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'hidden') {
+                        activateProtection();
+                    } else {
+                        deactivateProtection();
+                    }
+                });
+
+                // Monitor window blur/focus
+                window.addEventListener('blur', () => {
+                    activateProtection();
+                });
+
+                window.addEventListener('focus', () => {
+                    deactivateProtection();
+                });
+
+                // Release protection when mouse is released
+                document.addEventListener('mouseup', () => {
+                    if (!isProtectionActive) {
+                        deactivateProtection();
+                    }
+                });
+            };
+
+            try {
+                initSecurity();
+                loadPDF('/pdf/{{ access_token }}');
+            } catch {}
+        })();
+
+        // Mutation observer for DOM changes
+        (() => {
+            const observer = new MutationObserver(() => {
+                try {
+                    if (document.documentElement.innerHTML.length > 100000) {
+                        window.location.reload();
+                    }
+                } catch {}
+            });
+            
+            observer.observe(document.documentElement, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                characterData: true
+            });
+        })();
+    </script>
+</body>
+</html>
